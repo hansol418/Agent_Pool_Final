@@ -45,5 +45,12 @@ def main():
         merged_model.config.pad_token_id = tokenizer.pad_token_id
     merged_model.config.use_cache = False
 
+    print(f"[5] 병합된 모델 저장: {OUTPUT_DIR}")
+    merged_model.save_pretrained(OUTPUT_DIR)
+    tokenizer.save_pretrained(OUTPUT_DIR)
+
+    print("[✅] 완료: 병합된 30B 모델이 저장되었습니다.")
+
+
 if __name__ == "__main__":
     main()
