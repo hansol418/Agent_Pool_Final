@@ -24,6 +24,12 @@ def main():
         tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
-
+    print(f"[2] 베이스 모델 로딩 (fp16, device_map='auto')")
+    base_model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL_NAME,
+        torch_dtype=torch.float16,
+        device_map="auto",
+    )
+    
 if __name__ == "__main__":
     main()
