@@ -66,9 +66,44 @@ def formatting_func(batch: Dict[str, List[str]]) -> List[str]:
     return outputs
 
 
+# -------------------------------------------------------
+# 3) 모델 / 토크나이저 로드 (bf16 LoRA, no bitsandbytes)
+# -------------------------------------------------------
+
+def load_model_and_tokenizer():
+    print(f"[🔄] Loading base model (bf16, no bitsandbytes): {BASE_MODEL_NAME}")
+
+    # 3-1) 토크나이저
+    tokenizer = AutoTokenizer.from_pretrained(
+        BASE_MODEL_NAME,
+        use_fast=False,
+    )
+
+    # pad_token 없으면 eos_token으로 맞춰주기
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # SFT에서는 일반적으로 right padding 사용
+    tokenizer.padding_side = "right"
+
+    # 3-2) 모델 로드 (bfloat16, 양자화 없음)
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE_MODEL_NAME,
+        torch_dtype=torch.bfloat16,   # ✅ bf16
+        device_map="auto",            # 여러 GPU 있으면 자동 분산
+    )
+
+    # LoRA 학습 시에는 use_cache=False 로 두는 게 안정적
+    if hasattr(model, "config"):
+        model.config.use_cache = False
+
+    print("[✅] Model & tokenizer loaded (bf16, no quantization)")
+    return model, tokenizer
+
+
 def main():
     train_dataset = load_react_dataset(REACT_DATA_JSONL.as_posix())
-    print(f"Loaded dataset size: {len(train_dataset)}")
+    model, tokenizer = load_model_and_tokenizer()
 
 
 if __name__ == "__main__":
