@@ -163,10 +163,46 @@ def make_training_args(output_dir: str) -> TrainingArguments:
         report_to=[],
     )
     return args
-    
+
+
+# -------------------------------------------------------
+# 6) main: 전체 학습 파이프라인
+# -------------------------------------------------------
+
 def main():
-    train_dataset = load_react_dataset(REACT_DATA_JSONL.as_posix())
+    # 6-1) Dataset 로드
+    print("[📁] Loading dataset...")
+    train_dataset = load_react_dataset(DATA_PATH)
+    print(f"[📁] Train samples: {len(train_dataset)}")
+
+    # 6-2) 모델 / 토크나이저 로드
     model, tokenizer = load_model_and_tokenizer()
+
+    # 6-3) LoRA 설정
+    lora_config = make_lora_config()
+
+    # 6-4) TrainingArguments 설정
+    training_args = make_training_args(OUTPUT_DIR)
+
+    # 6-5) SFTTrainer 생성
+    print("[🚀] Starting SFT training (ReAct Planner)...")
+
+    trainer = SFTTrainer(
+        model=model,
+        tokenizer=tokenizer,
+        train_dataset=train_dataset,
+        peft_config=lora_config,
+        formatting_func=formatting_func,   # prompt+response를 하나의 텍스트로 변환
+        max_seq_length=1024,               # ReAct 프롬프트+응답 길이 여유 있게
+        args=training_args,
+    )
+
+    # 6-6) 학습 시작
+    trainer.train()
+
+    # 6-7) LoRA 어댑터 저장
+    trainer.save_model()
+    print(f"[✅] LoRA planner model saved to: {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":
