@@ -43,6 +43,29 @@ def load_react_dataset(path: str):
     return dataset["train"]
 
 
+# -------------------------------------------------------
+# 2) 텍스트 포맷팅 함수
+#    - prompt + response 를 하나의 텍스트로 합친다.
+#    - 추론 때는 "prompt만 넣고 -> 모델이 response(3줄)를 이어서 생성"하게 사용.
+# -------------------------------------------------------
+
+def formatting_func(batch: Dict[str, List[str]]) -> List[str]:
+    """
+    batch["prompt"], batch["response"] 를 받아서
+    "prompt + response" 형태의 단일 텍스트 시퀀스로 합친다.
+    """
+    outputs = []
+    prompts = batch["prompt"]
+    responses = batch["response"]
+
+    for p, r in zip(prompts, responses):
+        # 중간에 구분 줄 하나 정도만 넣고 바로 response를 붙인다.
+        text = p.rstrip() + "\n" + r.strip()
+        outputs.append(text)
+
+    return outputs
+
+
 def main():
     train_dataset = load_react_dataset(REACT_DATA_JSONL.as_posix())
     print(f"Loaded dataset size: {len(train_dataset)}")
