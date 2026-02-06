@@ -30,6 +30,20 @@ def main():
         torch_dtype=torch.float16,
         device_map="auto",
     )
-    
+
+    print(f"[3] LoRA 어댑터 로딩: {LORA_PATH}")
+    lora_model = PeftModel.from_pretrained(
+        base_model,
+        LORA_PATH,
+    )
+
+    print("[4] LoRA를 base 가중치에 병합(merge_and_unload)")
+    merged_model = lora_model.merge_and_unload()
+
+    # pad_token_id / use_cache 등 설정은 그대로 유지
+    if getattr(merged_model.config, "pad_token_id", None) is None:
+        merged_model.config.pad_token_id = tokenizer.pad_token_id
+    merged_model.config.use_cache = False
+
 if __name__ == "__main__":
     main()
