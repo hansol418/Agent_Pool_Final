@@ -18,6 +18,20 @@ agent = Agent([WebSearchTool(), DocSearchTool(), SummarizeTool()])
 ICON_FILE = ASSETS_DIR / "agent_pool_icon.png"
 
 
+def _img_to_data_uri(p: Path) -> str:
+    """
+    로컬 PNG 파일을 Base64 Data URI로 변환
+    - Gradio의 file= 서빙/allowed_paths/CWD 문제를 회피
+    - 브라우저가 이미지 요청을 따로 하지 않아서 100% 표시됨
+    """
+    if not p.exists():
+        # 아이콘 파일이 없을 때도 UI가 죽지 않게 빈 문자열 반환(이미지 없이 텍스트만)
+        return ""
+
+    b64 = base64.b64encode(p.read_bytes()).decode("utf-8")
+    return f"data:image/png;base64,{b64}"
+
+
 def chat_fn(message, history):
     """
     message: 사용자가 막 입력한 한 줄(str)
