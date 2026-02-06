@@ -31,3 +31,55 @@ def set_planner_model(model: PreTrainedModel, tokenizer: PreTrainedTokenizerBase
     _PLANNER_TOKENIZER = tokenizer
 
 
+def planner_generate(
+    prompt: str,
+    max_new_tokens: int = 96,
+    temperature: float = 0.0,
+) -> str:
+    """
+    ReAct Planner 전용 generate 함수.
+
+    - chat 템플릿, system prompt 등 아무 것도 안 붙이고
+      "순수 텍스트 프롬프트"만 그대로 넣는다.
+    - test_react_planner_only.py 에서 쓰던 패턴과 동일하게 동작하게 만드는 게 목표.
+    """
+    if _PLANNER_MODEL is None or _PLANNER_TOKENIZER is None:
+        raise RuntimeError(
+            "planner_generate: Planner model is not set. "
+            "Call set_planner_model(model, tokenizer) from app.py "
+            "after loading the base+LoRA model."
+        )
+
+    model = _PLANNER_MODEL
+    tokenizer = _PLANNER_TOKENIZER
+
+    model.eval()
+    device = next(model.parameters()).device
+
+    # 1) 프롬프트를 그대로 토크나이즈
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        add_special_tokens=False,
+    )
+    input_ids = inputs["input_ids"].to(device)
+    attention_mask = inputs["attention_mask"].to(device)
+
+    input_length = input_ids.shape[1]
+
+    with torch.no_grad():
+        generated_ids = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_new_tokens=max_new_tokens,
+            do_sample=(temperature > 0.0),
+            temperature=temperature if temperature > 0.0 else 1.0,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+
+    # 2) 프롬프트 부분 잘라내고, 새로 생성된 토큰만 디코딩
+    new_tokens = generated_ids[0, input_length:]
+    text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+
+    return text.strip()
