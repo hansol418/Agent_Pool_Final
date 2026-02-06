@@ -171,3 +171,42 @@ def decide_next_node(state: AgentState):
         return END
     else:
         return END
+    
+
+    # ------------------------------------------------
+# 5) LangGraph 그래프 구성
+# ------------------------------------------------
+graph = StateGraph(AgentState)
+
+graph.add_node("agent_llm", agent_llm_node)
+graph.add_node("web_search", web_search_node)
+graph.add_node("doc_search", doc_search_node)
+graph.add_node("summarize", summarize_node)
+
+graph.set_entry_point("agent_llm")
+
+graph.add_conditional_edges(
+    "agent_llm",
+    decide_next_node,
+    {
+        "web_search": "web_search",
+        "doc_search": "doc_search",
+        "summarize": "summarize",
+        END: END,
+    },
+)
+
+# 🔹 툴 → agent_llm 로 돌아가는 edge 는 제거 (툴 실행 후 바로 종료)
+# graph.add_edge("web_search", "agent_llm")
+# graph.add_edge("doc_search", "agent_llm")
+# graph.add_edge("summarize", "agent_llm")
+
+app = graph.compile()
+
+
+class Agent:
+    def __init__(self, tools=None):
+        self.tools = tools or []
+
+    def answer(self, query: str) -> str:
+        return run_langgraph_agent(query)
