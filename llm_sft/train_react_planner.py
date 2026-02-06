@@ -101,6 +101,33 @@ def load_model_and_tokenizer():
     return model, tokenizer
 
 
+# -------------------------------------------------------
+# 4) LoRA 설정
+# -------------------------------------------------------
+
+def make_lora_config():
+    """
+    Planner 전용 LoRA 설정.
+    너무 aggressive 하지 않게 적당한 r, alpha 사용.
+    """
+    lora_config = LoraConfig(
+        r=64,
+        lora_alpha=16,
+        lora_dropout=0.05,
+        bias="none",
+        task_type="CAUSAL_LM",
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
+    )
+    return lora_config
+    
 def main():
     train_dataset = load_react_dataset(REACT_DATA_JSONL.as_posix())
     model, tokenizer = load_model_and_tokenizer()
