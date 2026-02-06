@@ -11,6 +11,12 @@ from tools.summarize import SummarizeTool
 from agent.agent import Agent
 from config.paths import ASSETS_DIR
 
+# LangGraph 래퍼 에이전트
+agent = Agent([WebSearchTool(), DocSearchTool(), SummarizeTool()])
+
+# ✅ 절대 경로 고정 (직접 확인)
+ICON_FILE = ASSETS_DIR / "agent_pool_icon.png"
+
 
 def chat_fn(message, history):
     """
