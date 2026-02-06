@@ -14,7 +14,15 @@ OUTPUT_DIR = MERGED_MODEL_DIR.as_posix()
 
 
 def main():
-    print("병합 작업 시작")
+    print(f"[1] 토크나이저 로딩: {BASE_MODEL_NAME}")
+    tokenizer = AutoTokenizer.from_pretrained(
+        BASE_MODEL_NAME,
+        use_fast=False,
+    )
+
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"
 
 
 if __name__ == "__main__":
