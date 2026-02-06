@@ -146,3 +146,28 @@ def summarize_node(state: AgentState) -> AgentState:
     state["tool_result"] = f"[summarize 결과]\n{result}"
     state["final_answer"] = result
     return state
+
+
+# ------------------------------------------------
+# 4) 분기 로직: 다음으로 어느 노드로 갈지 결정
+# ------------------------------------------------
+def decide_next_node(state: AgentState):
+    action = state.get("last_action", "FINAL")
+    action_lower = action.lower()
+    summarize_count = state.get("summarize_count", 0)
+
+    # summarize 반복 제한
+    if action_lower == "summarize":
+        if summarize_count >= 1:
+            return END
+        else:
+            return "summarize"
+
+    if action_lower == "web_search":
+        return "web_search"
+    elif action_lower == "doc_search":
+        return "doc_search"
+    elif action_lower == "final":
+        return END
+    else:
+        return END
