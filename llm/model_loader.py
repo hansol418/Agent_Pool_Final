@@ -11,6 +11,7 @@ from config.config import (
     REACT_LORA_PATH,
 )
 
+
 def load_hf_model():
     """
     HuggingFace LLaMA 기반 30B 모델을 로드하고,
@@ -51,3 +52,27 @@ def load_hf_model():
         model.config.use_cache = False
 
     print("[✅] Base model loaded (fp16, no quantization)")
+
+    # -------------------------------------------------
+    # 3) ReAct Planner LoRA 어댑터 로딩 (선택적)
+    # -------------------------------------------------
+    if USE_REACT_PLANNER_LORA:
+        print(f"[🔍] Trying to load ReAct LoRA from: {REACT_LORA_PATH}")
+        if os.path.isdir(REACT_LORA_PATH):
+            try:
+                model = PeftModel.from_pretrained(
+                    model,
+                    REACT_LORA_PATH,
+                    # torch_dtype=torch.float16,  # 이미 base가 fp16 이므로 생략 가능
+                )
+                print("[✅] ReAct Planner LoRA attached successfully.")
+            except Exception as e:
+                print(f"[⚠] Failed to load LoRA adapter: {e}")
+                print("    → LoRA 없이 base 모델만 사용합니다.")
+        else:
+            print(f"[⚠] LoRA path not found: {REACT_LORA_PATH}")
+            print("    → USE_REACT_PLANNER_LORA=True 이지만 디렉토리가 없습니다. base 모델만 사용합니다.")
+    else:
+        print("[ℹ] USE_REACT_PLANNER_LORA=False → LoRA 미적용, base 모델만 사용.")
+
+    return tokenizer, model
