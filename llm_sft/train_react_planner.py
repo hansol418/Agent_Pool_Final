@@ -127,6 +127,42 @@ def make_lora_config():
         ],
     )
     return lora_config
+
+
+# -------------------------------------------------------
+# 5) TrainingArguments 설정
+# -------------------------------------------------------
+
+def make_training_args(output_dir: str) -> TrainingArguments:
+    """
+    A100 80GB 기준, 가벼운 SFT 예시용 설정.
+    (실제 데이터가 늘어나면 epoch/step 조정 가능)
+    """
+    args = TrainingArguments(
+        output_dir=output_dir,
+        per_device_train_batch_size=1,      # 30B 기준 안전한 배치사이즈
+        gradient_accumulation_steps=16,     # effective batch size ~= 16
+        num_train_epochs=3,                 # 데이터 크기에 따라 조정
+        learning_rate=2e-4,
+        lr_scheduler_type="cosine",
+        warmup_ratio=0.03,
+        logging_steps=10,
+        save_strategy="steps",
+        save_steps=100,
+        save_total_limit=2,
+
+        # ✅ fp16 스케일링 끄고 bf16만 사용
+        fp16=False,
+        bf16=True,
+
+        gradient_checkpointing=True,
+
+        # bitsandbytes 8bit 옵티마이저 대신, 표준 AdamW 사용
+        optim="adamw_torch",
+
+        report_to=[],
+    )
+    return args
     
 def main():
     train_dataset = load_react_dataset(REACT_DATA_JSONL.as_posix())
