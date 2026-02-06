@@ -29,3 +29,69 @@ class AgentState(TypedDict, total=False):
 _web = WebSearchTool()
 _doc = DocSearchTool()
 _sum = SummarizeTool()
+
+
+# ------------------------------------------------
+# 2) LLM 노드: ReAct 스타일로 Thought / Action / Action Input 생성
+# ------------------------------------------------
+def agent_llm_node(state: AgentState) -> AgentState:
+    """에이전트의 두뇌 역할: 지금까지의 상황을 보고
+    다음에 어떤 도구를 쓸지, 또는 최종 답을 줄지 결정한다.
+    """
+
+    query = state.get("query", "")
+    tool_result = state.get("tool_result", "")
+    messages = state.get("messages", [])
+
+    # 이전까지의 도구 실행 로그(Observation)를 프롬프트에 싹 모아준다.
+    history_block = "\n\n".join(messages) if messages else "없음"
+
+    # 직전 도구 결과를 Observation으로 연결
+    if tool_result:
+        history_block += f"\n\n[Observation]\n{tool_result}"
+
+    prompt = f"""
+당신은 도구를 사용할 수 있는 한국어 지능형 에이전트입니다.
+
+사용 가능한 도구:
+- web_search : 웹 검색을 통해 최신 정보, 일반 상식, 생활 정보를 찾습니다.
+- doc_search : 내부 문서(AI 개념, 자연어 처리, 강화학습 등)를 검색합니다.
+- summarize  : 여러 정보를 요약하여 정리합니다.
+- FINAL      : 지금까지의 정보를 바탕으로 최종 답변을 바로 제공합니다.
+
+출력 형식(반드시 이 3줄만 포함):
+
+Thought: (짧은 생각)
+Action: web_search | doc_search | summarize | FINAL
+Action Input: (도구에 넘길 입력 내용 또는 FINAL일 경우 최종 답변 전체)
+
+지금까지의 대화 및 도구 결과:
+{history_block}
+
+사용자의 질문:
+{query}
+
+위 형식을 따라 다음 행동을 결정하세요.
+""".strip()
+
+    # 🔹 ReAct Planner 전용 호출: chat 템플릿 없이 순수 프롬프트로 호출
+    #    → 토큰 수를 64로 줄여서 속도 절약
+    llm_output = planner_generate(
+        prompt,
+        max_new_tokens=160,
+        temperature=0.0,  # 결정적 행동
+    ).strip()
+
+    print("\n[AGENT LLM OUTPUT]\n", llm_output, "\n")
+
+    # 로그 저장
+    messages.append(llm_output)
+    state["messages"] = messages
+
+    # 🔹 형식이 완전히 깨졌을 때 방어 로직
+    #    (영어 Action: 도 없고, 한글 행동: 도 없으면 그냥 전체를 최종 답변으로 사용)
+    if ("Action:" not in llm_output) and ("행동:" not in llm_output):
+        state["last_action"] = "FINAL"
+        state["action_input"] = llm_output
+        state["final_answer"] = llm_output
+        return state
