@@ -95,3 +95,54 @@ Action Input: (도구에 넘길 입력 내용 또는 FINAL일 경우 최종 답�
         state["action_input"] = llm_output
         state["final_answer"] = llm_output
         return state
+    
+
+    # ------------------------------------------------
+# 3) 각 Tool Node: last_action / action_input 기반으로 실행
+#    → 속도 위해 툴 실행 후 바로 final_answer 채우고 종료
+# ------------------------------------------------
+def web_search_node(state: AgentState) -> AgentState:
+    action_input = state.get("action_input", "").strip()
+    query = action_input or state.get("query", "")
+
+    print(f"[TOOL] web_search 실행, 입력: {query}")
+    result = _web.run(query)
+    state["tool_result"] = f"[web_search 결과]\n{result}"
+    state["final_answer"] = state["tool_result"]
+    return state
+
+
+def doc_search_node(state: AgentState) -> AgentState:
+    action_input = state.get("action_input", "").strip()
+    query = action_input or state.get("query", "")
+
+    print(f"[TOOL] doc_search 실행, 입력: {query}")
+    result = _doc.run(query)
+    state["tool_result"] = f"[doc_search 결과]\n{result}"
+    state["final_answer"] = state["tool_result"]
+    return state
+
+
+def summarize_node(state: AgentState) -> AgentState:
+    """
+    summarize 도구:
+    - 지금까지 messages + tool_result를 합쳐 요약
+    - summarize_count 를 1 증가
+    - 요약 결과를 tool_result 및 final_answer 로 기록
+    """
+    count = state.get("summarize_count", 0) + 1
+    state["summarize_count"] = count
+
+    text_pieces = []
+    if "messages" in state:
+        text_pieces.extend(state["messages"])
+    if "tool_result" in state:
+        text_pieces.append(state["tool_result"])
+
+    text = "\n\n".join(text_pieces) if text_pieces else state.get("query", "")
+    print(f"[TOOL] summarize 실행 (count={count})")
+    result = _sum.run(text)
+
+    state["tool_result"] = f"[summarize 결과]\n{result}"
+    state["final_answer"] = result
+    return state
